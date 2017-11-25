@@ -6,14 +6,21 @@
 package uk.co.westhawk.oldglory;
 
 import java.io.IOException;
+import java.io.Reader;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Properties;
 import java.util.Random;
 import java.util.Timer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -35,8 +42,13 @@ public class ColourSender implements Runnable {
     ArrayList<Integer> loyal;
 
     public int map[];
-    
-    
+    double ripples = 0.5;
+    double speed = 10.0;
+    double min = 0.4;
+    double depth = 0.3;
+    double rmin = 0.4;
+    double rdepth = 0.3;
+
     public ColourSender(String label, int l, long s) {
         tick = new Timer();
         leds = l;
@@ -48,21 +60,26 @@ public class ColourSender implements Runnable {
         rand = new Random();
         sleep = s;
 
-        int stride = leds/3;
+        try {
+            this.loadProps();
+        } catch (IOException ex) {
+            System.out.println(ex.getMessage());
+        }
+        int stride = leds / 3;
         // top row is backwards 
         int le = 0;
-        for (int i=stride-1;i>=0;i--){
-            map[le++]=i;
+        for (int i = stride - 1; i >= 0; i--) {
+            map[le++] = i;
         }
         // middlerow is sane
-        for (int i=stride; i< stride*2;i++){
-            map[le++]=i;
+        for (int i = stride; i < stride * 2; i++) {
+            map[le++] = i;
         }
         //bottom row is backwards
-        for (int i=(stride*3)-1; i>=stride*2; i--){
-            map[le++]=i;
+        for (int i = (stride * 3) - 1; i >= stride * 2; i--) {
+            map[le++] = i;
         }
-        
+
         short port = 0;
         String bits[] = label.split(":");
         if (bits.length != 3) {
@@ -79,6 +96,7 @@ public class ColourSender implements Runnable {
         } catch (SocketException ex) {
             throw new IllegalArgumentException("Socket problem " + ex.getMessage());
         }
+
         sender = new Thread(this);
         sender.start();
         loyal = new ArrayList();
@@ -86,6 +104,34 @@ public class ColourSender implements Runnable {
         setAll(0x664444);
         fillruss();
         creep();
+    }
+
+    static double getFloatProps(Properties p, String n, double defv) {
+        double ret = defv;
+        String vs = p.getProperty(n);
+        if (vs != null) {
+            ret = Double.parseDouble(vs);
+        }
+        return ret;
+    }
+
+    public void loadProps() throws IOException {
+        Properties pr = new Properties();
+        Reader reader = Files.newBufferedReader(Paths.get("fadedglory.properties"));
+        pr.load(reader);
+        ripples = getFloatProps(pr, "ripples", 0.5);
+        speed = getFloatProps(pr, "speed", 15.0);
+        min = getFloatProps(pr, "min", 0.1);
+        depth = getFloatProps(pr, "depth", 0.4);
+        rmin = getFloatProps(pr, "rmin", 0.1);
+        rdepth = getFloatProps(pr, "rdepth", 0.4);
+        System.out.println("loaded props :");
+        System.out.println("ripples:" + ripples);
+        System.out.println("speed:" + speed);
+        System.out.println("min:" + min);
+        System.out.println("depth:" + depth);
+        System.out.println("rmin:" + rmin);
+        System.out.println("rdepth:" + rdepth);
     }
 
     public int reset() {
@@ -120,20 +166,17 @@ public class ColourSender implements Runnable {
 
     public void ripple() {
         int loop = 0;
-        int stripe = leds/3;
-        double ripples = 0.5;
-        double speed = 10.0;
-        double min = 0.1;
-        double depth = 0.4;
-        
+        int stripe = leds / 3;
         while (true) {
             
             for (int j = 0; j < 3; j++) {
-                
                 int offs = stripe * j;
                 for (int i = 0; i < stripe; i++) {
                     double a = (j + i + (ripples * loop)) * (Math.PI * speed) / leds;
-                    double fac = (min+depth) + (depth * Math.sin(a));
+                    double ldepth = state[offs + i] ? rdepth : depth;
+                    double lmin = state[offs + i] ? rmin : min;
+
+                    double fac = (lmin + ldepth) + (ldepth * Math.sin(a));
                     int c = state[offs + i] ? this.ruscolours[offs + i] : this.usacolours[offs + i];
                     char rr = (char) ((c & 0xFF0000) >> 16);
                     char rg = (char) ((c & 0x00FF00) >> 8);
@@ -243,7 +286,7 @@ public class ColourSender implements Runnable {
                     System.out.println("Rippling");
                 } else {
                     sleeptime = 1000;
-                    System.out.println("creeping "+max);
+                    System.out.println("creeping " + max);
                 }
                 try {
                     Thread.sleep(sleeptime);
@@ -259,10 +302,10 @@ public class ColourSender implements Runnable {
         rust.start();
     }
 
-    String printRGB(int v){
-        return "r=" +((0xff0000&v)>> 16) + " g="+((0xff00 &v)>>8)+" b="+(0xff&v);
+    String printRGB(int v) {
+        return "r=" + ((0xff0000 & v) >> 16) + " g=" + ((0xff00 & v) >> 8) + " b=" + (0xff & v);
     }
-    
+
     private void fade() {
         Runnable r = () -> {
             int steps = 0xff - 0x44;
@@ -292,9 +335,12 @@ public class ColourSender implements Runnable {
                             float rdiff = ((tcol & 0xff0000) >> 16) - ur;
                             float gdiff = ((tcol & 0xff00) >> 8) - ug;
                             float bdiff = (tcol & 0xff) - ub;
-                            int rval = ur + ((rdiff<0.0)?-step:step); rval = rval > 255 ? 255:rval;
-                            int gval = ur + ((gdiff<0.0)?-step:step); gval = gval > 255 ? 255:gval;
-                            int bval = ur + ((bdiff<0.0)?-step:step); bval = bval > 255 ? 255:bval;
+                            int rval = ur + ((rdiff < 0.0) ? -step : step);
+                            rval = rval > 255 ? 255 : rval;
+                            int gval = ur + ((gdiff < 0.0) ? -step : step);
+                            gval = gval > 255 ? 255 : gval;
+                            int bval = ur + ((bdiff < 0.0) ? -step : step);
+                            bval = bval > 255 ? 255 : bval;
                             fadeFlag[u] = ((rval & 0xff) << 16) + ((gval & 0xff) << 8) + (bval & 0xff);
                         }
                         System.out.println("fade flag is " + printRGB(fadeFlag[0]) + " " + printRGB(fadeFlag[1]) + " " + printRGB(fadeFlag[2]));
