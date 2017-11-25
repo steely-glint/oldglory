@@ -69,7 +69,7 @@ public class ColourSender implements Runnable {
         reset();
         setAll(0x664444);
         fillruss();
-        fade();
+        creep();
     }
 
     public int reset() {
@@ -79,7 +79,7 @@ public class ColourSender implements Runnable {
         }
         return loyal.size();
     }
-    int defFlag[] = {0xffffff, 0x0000FF, 0xFF0000};
+    int defFlag[] = {0xff0000, 0x0000FF, 0xFFFFFF};
 
     public void fillruss() {
         fillruss(defFlag);
@@ -104,11 +104,12 @@ public class ColourSender implements Runnable {
 
     public void ripple() {
         int loop = 0;
-
+        int stripe = leds/3;
         while (true) {
             for (int j = 0; j < 3; j++) {
-                int offs = 30 * j;
-                for (int i = 0; i < leds / 3; i++) {
+                
+                int offs = stripe * j;
+                for (int i = 0; i < stripe; i++) {
                     double a = (j + i + (0.5 * loop)) * (Math.PI * 15.0) / leds;
                     double fac = 0.5 + (0.4 * Math.sin(a));
                     int c = state[offs + i] ? this.ruscolours[offs + i] : this.usacolours[offs + i];
@@ -217,8 +218,10 @@ public class ColourSender implements Runnable {
                 if (max == 0) {
                     max = reset();
                     sleeptime = 90000;
+                    System.out.println("Rippling");
                 } else {
                     sleeptime = 1000;
+                    System.out.println("creeping "+max);
                 }
                 try {
                     Thread.sleep(sleeptime);
