@@ -5,7 +5,6 @@
  */
 package uk.co.westhawk.oldglory;
 
-import com.phono.srtplight.Log;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -22,7 +21,6 @@ import java.util.Timer;
  */
 public class ColourSender implements Runnable {
 
-    private String _label;
     InetSocketAddress _toAdd;
     DatagramSocket _udp;
     Timer tick;
@@ -36,17 +34,35 @@ public class ColourSender implements Runnable {
     Random rand;
     ArrayList<Integer> loyal;
 
+    public int map[];
+    
+    
     public ColourSender(String label, int l, long s) {
         tick = new Timer();
         leds = l;
         colours = new int[leds];
         usacolours = new int[leds];
         ruscolours = new int[leds];
+        map = new int[leds];
         state = new boolean[leds];
         rand = new Random();
         sleep = s;
 
-        _label = label;
+        int stride = leds/3;
+        // top row is backwards 
+        int le = 0;
+        for (int i=stride-1;i>=0;i--){
+            map[le++]=i;
+        }
+        // middlerow is sane
+        for (int i=stride; i< stride*2;i++){
+            map[le++]=i;
+        }
+        //bottom row is backwards
+        for (int i=(stride*3)-1; i>=stride*2; i--){
+            map[le++]=i;
+        }
+        
         short port = 0;
         String bits[] = label.split(":");
         if (bits.length != 3) {
@@ -120,7 +136,7 @@ public class ColourSender implements Runnable {
                     char g = (char) (rg * fac);
                     char b = (char) (rb * fac);
                     int shade = ((r << 16) + (g << 8) + b);
-                    colours[offs + i] = shade;
+                    colours[map[offs + i]] = shade;
                 }
             }
             try {
