@@ -121,13 +121,19 @@ public class ColourSender implements Runnable {
     public void ripple() {
         int loop = 0;
         int stripe = leds/3;
+        double ripples = 0.5;
+        double speed = 10.0;
+        double min = 0.1;
+        double depth = 0.4;
+        
         while (true) {
+            
             for (int j = 0; j < 3; j++) {
                 
                 int offs = stripe * j;
                 for (int i = 0; i < stripe; i++) {
-                    double a = (j + i + (0.5 * loop)) * (Math.PI * 15.0) / leds;
-                    double fac = 0.5 + (0.4 * Math.sin(a));
+                    double a = (j + i + (ripples * loop)) * (Math.PI * speed) / leds;
+                    double fac = (min+depth) + (depth * Math.sin(a));
                     int c = state[offs + i] ? this.ruscolours[offs + i] : this.usacolours[offs + i];
                     char rr = (char) ((c & 0xFF0000) >> 16);
                     char rg = (char) ((c & 0x00FF00) >> 8);
