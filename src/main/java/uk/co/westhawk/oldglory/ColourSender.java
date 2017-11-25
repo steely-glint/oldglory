@@ -48,6 +48,8 @@ public class ColourSender implements Runnable {
     double depth = 0.3;
     double rmin = 0.4;
     double rdepth = 0.3;
+    double ripplevariance = 0.1;
+    double ripplecycle = 500.0;
 
     public ColourSender(String label, int l, long s) {
         tick = new Timer();
@@ -125,6 +127,9 @@ public class ColourSender implements Runnable {
         depth = getFloatProps(pr, "depth", 0.4);
         rmin = getFloatProps(pr, "rmin", 0.1);
         rdepth = getFloatProps(pr, "rdepth", 0.4);
+        ripplevariance = getFloatProps(pr, "ripplevariance", 0.4);
+        ripplecycle = getFloatProps(pr, "ripplecycle", 500.0);
+
         System.out.println("loaded props :");
         System.out.println("ripples:" + ripples);
         System.out.println("speed:" + speed);
@@ -132,6 +137,8 @@ public class ColourSender implements Runnable {
         System.out.println("depth:" + depth);
         System.out.println("rmin:" + rmin);
         System.out.println("rdepth:" + rdepth);
+        System.out.println("ripplevariance:" + ripplevariance);
+        System.out.println("ripplecycle:" + ripplecycle);
     }
 
     public int reset() {
@@ -168,7 +175,7 @@ public class ColourSender implements Runnable {
         int loop = 0;
         int stripe = leds / 3;
         while (true) {
-            
+            double lspeed = speed + speed * ripplevariance * Math.sin(loop/this.ripplecycle);
             for (int j = 0; j < 3; j++) {
                 int offs = stripe * j;
                 for (int i = 0; i < stripe; i++) {
