@@ -5,6 +5,7 @@
  */
 package uk.co.westhawk.oldglory;
 
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.Reader;
 import java.net.DatagramPacket;
@@ -13,14 +14,11 @@ import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Timer;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -50,6 +48,8 @@ public class ColourSender implements Runnable {
     double rdepth = 0.3;
     double ripplevariance = 0.1;
     double ripplecycle = 500.0;
+    private Thread tin;
+    private int percentSpeed = 50;
 
     public ColourSender(String label, int l, long s) {
         tick = new Timer();
@@ -101,6 +101,8 @@ public class ColourSender implements Runnable {
 
         sender = new Thread(this);
         sender.start();
+        tin = new Thread(() -> { runIn();});
+        tin.start();
         loyal = new ArrayList();
         reset();
         setAll(0x664444);
@@ -108,6 +110,22 @@ public class ColourSender implements Runnable {
         creep();
     }
 
+    void runIn() {
+        DataInputStream din = new DataInputStream(System.in);
+        while (true) {
+            try {
+                String l = din.readLine();
+                int rspeed = Integer.parseInt(l);
+                if ((rspeed <= 100) && (rspeed >= 0)){
+                    percentSpeed = rspeed;
+                    System.out.println("% speed ="+ percentSpeed);
+                }
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
+    
     static double getFloatProps(Properties p, String n, double defv) {
         double ret = defv;
         String vs = p.getProperty(n);
@@ -263,9 +281,9 @@ public class ColourSender implements Runnable {
                 long sleeptime;
                 if (max == 0) {
                     max = reset();
-                    sleeptime = 90000;
+                    sleeptime = 45000 + (90000 * this.percentSpeed)/100;
                 } else {
-                    sleeptime = (long) (500.0 + 1000.0 * rand.nextFloat());
+                    sleeptime = (long) (500 + (1000 * this.percentSpeed)/100);
                 }
                 try {
                     Thread.sleep(sleeptime);
@@ -289,11 +307,11 @@ public class ColourSender implements Runnable {
                 long sleeptime;
                 if (max == 0) {
                     max = reset();
-                    sleeptime = 90000;
-                    System.out.println("Rippling");
+                    sleeptime = 45000 + (90000 * this.percentSpeed)/100;
+                    System.out.println("Rippling"+ " "+sleeptime);
                 } else {
-                    sleeptime = 1000;
-                    System.out.println("creeping " + max);
+                    sleeptime = (500 + (1000 * this.percentSpeed)/100);
+                    System.out.println("creeping " + max+ " "+sleeptime);
                 }
                 try {
                     Thread.sleep(sleeptime);
