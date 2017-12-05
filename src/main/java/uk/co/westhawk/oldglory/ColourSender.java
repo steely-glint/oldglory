@@ -112,14 +112,17 @@ public class ColourSender implements Runnable {
 
     void runIn() {
         DataInputStream din = new DataInputStream(System.in);
+        System.out.println("reading std in");
+
         while (true) {
             try {
                 String l = din.readLine();
+                System.out.println("got line from stdin ->"+ l);
                 int rspeed = Integer.parseInt(l);
                 if ((rspeed <= 100) && (rspeed >= 0)){
                     percentSpeed = rspeed;
                     System.out.println("% speed ="+ percentSpeed);
-                }
+                } 
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
