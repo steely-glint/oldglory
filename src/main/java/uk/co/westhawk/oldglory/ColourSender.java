@@ -6,6 +6,8 @@
 package uk.co.westhawk.oldglory;
 
 import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.Reader;
 import java.net.DatagramPacket;
@@ -50,6 +52,7 @@ public class ColourSender implements Runnable {
     double ripplecycle = 500.0;
     private Thread tin;
     private int percentSpeed = 50;
+    String twittertotal = "twittertotal";
 
     public ColourSender(String label, int l, long s) {
         tick = new Timer();
@@ -101,7 +104,9 @@ public class ColourSender implements Runnable {
 
         sender = new Thread(this);
         sender.start();
-        tin = new Thread(() -> { runIn();});
+        tin = new Thread(() -> {
+            runIn();
+        });
         tin.start();
         loyal = new ArrayList();
         reset();
@@ -111,24 +116,27 @@ public class ColourSender implements Runnable {
     }
 
     void runIn() {
-        DataInputStream din = new DataInputStream(System.in);
-        System.out.println("reading std in");
-
+        File fi = new File(twittertotal);
         while (true) {
             try {
+                FileInputStream fin = new FileInputStream(fi);
+                DataInputStream din = new DataInputStream(fin);
+                System.out.println("opened "+fi.getAbsolutePath());
                 String l = din.readLine();
-                System.out.println("got line from stdin ->"+ l);
+                System.out.println("read line ->" + l);
                 int rspeed = Integer.parseInt(l);
-                if ((rspeed <= 100) && (rspeed >= 0)){
+                if ((rspeed <= 100) && (rspeed >= 0)) {
                     percentSpeed = rspeed;
-                    System.out.println("% speed ="+ percentSpeed);
-                } 
+                    System.out.println("% speed now =" + percentSpeed);
+                }
+                din.close();
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
+            try { Thread.sleep(60000); } catch (Exception x){;}
         }
     }
-    
+
     static double getFloatProps(Properties p, String n, double defv) {
         double ret = defv;
         String vs = p.getProperty(n);
@@ -150,6 +158,7 @@ public class ColourSender implements Runnable {
         rdepth = getFloatProps(pr, "rdepth", 0.4);
         ripplevariance = getFloatProps(pr, "ripplevariance", 0.4);
         ripplecycle = getFloatProps(pr, "ripplecycle", 500.0);
+        twittertotal = pr.getProperty("twittertotal", "twittertotal");
 
         System.out.println("loaded props :");
         System.out.println("ripples:" + ripples);
@@ -160,6 +169,8 @@ public class ColourSender implements Runnable {
         System.out.println("rdepth:" + rdepth);
         System.out.println("ripplevariance:" + ripplevariance);
         System.out.println("ripplecycle:" + ripplecycle);
+        System.out.println("twittertotal:" + twittertotal);
+
     }
 
     public int reset() {
@@ -196,7 +207,7 @@ public class ColourSender implements Runnable {
         int loop = 0;
         int stripe = leds / 3;
         while (true) {
-            double lspeed = speed + speed * ripplevariance * Math.sin(loop/this.ripplecycle);
+            double lspeed = speed + speed * ripplevariance * Math.sin(loop / this.ripplecycle);
             for (int j = 0; j < 3; j++) {
                 int offs = stripe * j;
                 for (int i = 0; i < stripe; i++) {
@@ -284,9 +295,9 @@ public class ColourSender implements Runnable {
                 long sleeptime;
                 if (max == 0) {
                     max = reset();
-                    sleeptime = 45000 + (90000 * this.percentSpeed)/100;
+                    sleeptime = 45000 + (90000 * this.percentSpeed) / 100;
                 } else {
-                    sleeptime = (long) (500 + (1000 * this.percentSpeed)/100);
+                    sleeptime = (long) (500 + (1000 * this.percentSpeed) / 100);
                 }
                 try {
                     Thread.sleep(sleeptime);
@@ -310,11 +321,11 @@ public class ColourSender implements Runnable {
                 long sleeptime;
                 if (max == 0) {
                     max = reset();
-                    sleeptime = 45000 + (90000 * this.percentSpeed)/100;
-                    System.out.println("Rippling"+ " "+sleeptime);
+                    sleeptime = 45000 + (90000 * this.percentSpeed) / 100;
+                    System.out.println("Rippling" + " " + sleeptime);
                 } else {
-                    sleeptime = (500 + (1000 * this.percentSpeed)/100);
-                    System.out.println("creeping " + max+ " "+sleeptime);
+                    sleeptime = (500 + (1000 * this.percentSpeed) / 100);
+                    System.out.println("creeping " + max + " " + sleeptime);
                 }
                 try {
                     Thread.sleep(sleeptime);
