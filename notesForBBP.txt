@@ -1,0 +1,77 @@
+How to install Ledscape on a PocketBeagle
+
+Background - I wanted to use a single channel of Ledscape to drive
+a few xmas LEDs. I had a spare PB - here are some notes:
+
+1) install bone-debian-9.2-iot-armhf-2017-10-10-4gb.img
+on an SD and boot the PB from that
+
+2) connect to the BBB by plugging a usb cable to the small USB 
+connector and your mac.
+Also plug in an ethernet connection to the internet - 
+or use usbtethering on on an android phone
+
+sudo cu -s 115200 -l /dev/cu.usbmodemFA1233 
+(numbers may vary)
+
+You'll need your mac password 
+
+now login as debian with password of temppwd
+
+3) Add thp user
+sudo useradd -m -G admin thp 
+sudo passwd thp
+
+4) change the debian password
+passwd 
+
+5) change /boot/uEenv.txt
+
+#uboot_overlay_pru=/lib/firmware/AM335X-PRU-RPROC-4-4-TI-00A0.dtbo
+###pru_uio (4.4.x-ti & mainline/bone kernel)
+uboot_overlay_pru=/lib/firmware/AM335X-PRU-UIO-00A0.dtbo
+
+- this lets us use the pru the 'old' way
+
+6)
+reboot
+
+login as thp
+
+
+7)
+sudo mkdir -p /project2/github/Yona-Appletree/
+sudo chown -R thp /project2/github
+cd /project2/github/Yona-Appletree/
+git clone git://github.com/Yona-Appletree/LEDscape
+cd LEDscape
+
+8) install pru
+	sudo modprobe uio_pruss	
+9)
+cd LEDscape
+vi opc-server.c
+change e131 port to 0 in
++       .e131_port = 0,
+And
++       assert_int_range_inclusive("e131 UDP Port", 0, 65535, input_config->e131_port);
+
+10) wget https://raw.githubusercontent.com/steely-glint/oldglory/master/pocket.json > pru/mappings/pocket.json
+
+11)
+make
+
+
+12) edit 
+sudo vi /etc/ledscape-config.json
+
+	"outputMapping": "pocket",
+	"demoMode": "fade",
+	"ledsPerStrip": 30,
+	"usedStripCount": 1,
+
+13) 
+sudo ./install-service.sh
+14)
+you now have Ledscape driving a single channel on the pin marked "26" on the PocketBeagle. you can use this - plus GND and VI to drive a short chain of LEDs from the pocket
+
